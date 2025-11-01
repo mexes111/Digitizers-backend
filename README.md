@@ -1,1 +1,1 @@
-# Digitizers API (NestJS + Prisma + Firebase)\n\nRun: yarn; docker compose up -d db; cp .env.example .env; fill FIREBASE_*; yarn prisma:generate; yarn prisma:migrate; yarn start:dev\n
+# Digitizers Backend
