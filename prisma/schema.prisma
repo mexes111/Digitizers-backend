@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  TALENT
+  HUNTER
+  ADMIN
+}
+
+enum JobStatus {
+  OPEN
+  CLOSED
+  DRAFT
+}
+
+enum ApplicationStatus {
+  APPLIED
+  SHORTLISTED
+  REJECTED
+  HIRED
+}
+
+model User {
+  id          String   @id @default(uuid())
+  firebaseUid String   @unique
+  email       String   @unique
+  displayName String?
+  role        UserRole @default(TALENT)
+
+  // relations
+  talentProfile TalentProfile?
+  hunterProfile HunterProfile?
+  jobs          Job[]            @relation("UserJobs")
+  applications  Application[]    @relation("UserApplications")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TalentProfile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  headline  String?
+  bio       String?
+  skills    String[] // Postgres text[] (Prisma supports scalar lists on Postgres)
+  location  String?
+  website   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model HunterProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  companyName String?
+  bio         String?
+  website     String?
+  location    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Job {
+  id          String     @id @default(uuid())
+  title       String
+  description String
+  budgetMin   Int?
+  budgetMax   Int?
+  currency    String?    // e.g. "NGN", "USD"
+  location    String?
+  status      JobStatus  @default(OPEN)
+  createdById String
+  createdBy   User       @relation("UserJobs", fields: [createdById], references: [id])
+  applications Application[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([status])
+  @@index([createdById])
+}
+
+model Application {
+  id           String             @id @default(uuid())
+  jobId        String
+  applicantId  String
+  coverLetter  String?
+  status       ApplicationStatus  @default(APPLIED)
+  job          Job                @relation(fields: [jobId], references: [id])
+  applicant    User               @relation("UserApplications", fields: [applicantId], references: [id])
+  createdAt    DateTime           @default(now())
+
+  @@unique([jobId, applicantId]) // prevent duplicate applications
+  @@index([applicantId])
+}
