@@ -1,12 +1,47 @@
 version: "3.8"
+
 services:
   db:
     image: postgres:14
+    container_name: digitizers_db
     environment:
-      POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: digitizers
-    ports: ["5432:5432"]
-    volumes: [dbdata:/var/lib/postgresql/data]
+    ports:
+      - "5432:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d digitizers"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: digitizers_api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      JWT_SECRET: dev-secret
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/digitizers
+    ports:
+      - "4000:4000"
+    # Hot-reload in dev (mount source & run yarn dev)
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    command: >
+      sh -c "
+        (yarn prisma migrate deploy >/dev/null 2>&1 || true) &&
+        yarn dev
+      "
+
 volumes:
   dbdata: {}
